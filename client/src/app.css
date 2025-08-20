@@ -1,0 +1,109 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu,
+    Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji",
+    "Segoe UI Emoji";
+  background: #0b1020;
+  color: #f7f7ff;
+}
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px;
+}
+.panel {
+  background: #141a32;
+  border: 1px solid #242a45;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+select,
+input {
+  background: #0e1430;
+  color: #fff;
+  border: 1px solid #2b335c;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+button {
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.add-user {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.message {
+  margin-top: 10px;
+  color: #22d3ee;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+@media (min-width: 800px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.leaderboard,
+.history {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.leaderboard li {
+  display: grid;
+  grid-template-columns: 64px 1fr 100px;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #242a45;
+}
+.leaderboard li.active {
+  background: #1b2142;
+}
+.rank {
+  opacity: 0.8;
+}
+.name {
+  font-weight: 600;
+}
+.points {
+  justify-self: end;
+}
+.history li {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid #242a45;
+}
+section h2 {
+  margin: 8px 0 12px;
+  font-size: 18px;
+  opacity: 0.95;
+}
