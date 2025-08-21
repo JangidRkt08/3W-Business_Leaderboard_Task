@@ -2,7 +2,7 @@
 
 ## Overview
 
-The backend is a Node.js/Express application that provides a RESTful API for the leaderboard application. It uses MongoDB for data persistence and Socket.IO for real-time communication.
+The backend is a Node.js/Express application that provides a RESTful API for the leaderboard application. It uses MongoDB for data persistence and Socket.IO for real-time communication with integrated claim handling.
 
 ## 🏗️ Architecture
 
@@ -11,24 +11,24 @@ The backend is a Node.js/Express application that provides a RESTful API for the
 - **Express.js** - Web framework
 - **MongoDB** - NoSQL database
 - **Mongoose** - MongoDB ODM
-- **Socket.IO** - Real-time bidirectional communication
-- **CORS** - Cross-origin resource sharing
+- **Socket.IO** - Real-time bidirectional communication with integrated claim processing
+- **CORS** - Cross-origin resource sharing (allows all origins)
 - **dotenv** - Environment variable management
 
 ### Project Structure
 ```
 server/
 ├── src/
-│   ├── index.js              # Main server file
+│   ├── index.js              # Main server file with Socket.IO logic
 │   ├── db.js                 # Database connection
 │   ├── models/               # MongoDB models
 │   │   ├── User.js           # User model
 │   │   └── ClaimHistory.js   # Claim history model
 │   ├── routes/               # API routes
-│   │   ├── users.js          # User management routes
-│   │   ├── claims.js         # Point claiming routes
-│   │   └── leaderboard.js    # Leaderboard routes
-│   └── seed.js               # Database seeding script
+│   │   └── users.js          # User management routes
+│   ├── services/             # Business logic services
+│       └── socketService.js  # Leaderboard calculation service
+│             
 ├── package.json              # Dependencies and scripts
 └── .env                      # Environment variables
 ```
@@ -76,12 +76,12 @@ npm run seed
 
 **Location**: `src/index.js`
 
-**Purpose**: Main server entry point that sets up Express, Socket.IO, and routes.
+**Purpose**: Main server entry point that sets up Express, Socket.IO with integrated claim handling, and routes.
 
 **Key Features**:
 - Express server setup
-- Socket.IO integration
-- CORS configuration
+- Socket.IO integration with claim processing
+- CORS configuration (allows all origins)
 - Route mounting
 - Database connection
 - Error handling
@@ -93,7 +93,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+        origin: true,
         methods: ['GET', 'POST']
     }
 });
@@ -102,7 +102,7 @@ const io = new Server(server, {
 **Middleware Configuration**:
 ```javascript
 app.use(cors({
-    origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173'
+    origin: true
 }));
 app.use(express.json());
 ```
@@ -110,8 +110,24 @@ app.use(express.json());
 **Route Mounting**:
 ```javascript
 app.use('/api/users', usersRouter);
-app.use('/api/claim', claimsRouter);
-app.use('/api/leaderboard', leaderboardRouter);
+```
+
+**Socket.IO Claim Handling**:
+```javascript
+io.on('connection', (socket) => {
+    // Send initial leaderboard data
+    getLeaderboard().then((data) => 
+        socket.emit('leaderboard:data', data)
+    ).catch(() => {});
+
+    socket.on('claim:submit', async (payload, ack) => {
+        // Process point claims directly through Socket.IO
+        // Generate random points (1-10)
+        // Update user total points
+        // Create claim history
+        // Emit updates to all clients
+    });
+});
 ```
 
 ### db.js - Database Connection
@@ -220,75 +236,83 @@ mongoose.set('strictQuery', true);
 - **Limit**: 100 records
 - **Error Handling**: 500 for server errors
 
-### Claims Routes
-
-**Location**: `src/routes/claims.js`
-
-**Endpoints**:
-
-#### `POST /api/claim`
-- **Purpose**: Claim points for a user
-- **Body**: `{ userId: string }`
-- **Validation**: userId required
-- **Process**:
-  1. Find user by ID
-  2. Generate random points (1-10)
-  3. Update user's total points
-  4. Create claim history record
-  5. Emit Socket.IO event
-- **Response**: Claim result with user info
-- **Socket Event**: Emits `leaderboard:updated`
-- **Error Handling**: 400 for missing userId, 404 for user not found
-
-**Point Generation**:
-```javascript
-function randomPoints() {
-    return Math.floor(Math.random() * 10) + 1; // 1-10
-}
-```
-
-### Leaderboard Routes
-
-**Location**: `src/routes/leaderboard.js`
-
-**Endpoints**:
-
-#### `GET /api/leaderboard`
-- **Purpose**: Get ranked leaderboard
-- **Process**:
-  1. Fetch all users
-  2. Sort by total points (descending)
-  3. Add rank numbers
-  4. Return ranked array
-- **Sorting**: By totalPoints (descending), then by updatedAt (ascending)
-- **Response**: Array of ranked user objects
-- **Error Handling**: 500 for server errors
-
-**Ranking Logic**:
-```javascript
-const ranked = users.map((user, idx) => ({
-    _id: user._id,
-    name: user.name,
-    totalPoints: user.totalPoints,
-    rank: idx + 1,
-}));
-```
-
 ## 🔌 Socket.IO Integration
 
 ### Real-time Events
 
+**Events Handled**:
+
+#### `claim:submit`
+- **Triggered**: When client submits a point claim
+- **Payload**: `{ userId: string }`
+- **Process**:
+  1. Validate userId
+  2. Find user in database
+  3. Generate random points (1-10)
+  4. Update user's total points
+  5. Create claim history record
+  6. Emit updates to all clients
+- **Response**: Acknowledgment callback or error event
+
 **Events Emitted**:
 
-#### `leaderboard:updated`
-- **Triggered**: After point claims
-- **Purpose**: Notify clients of leaderboard changes
-- **Usage**: Frontend refreshes leaderboard
+#### `leaderboard:data`
+- **Triggered**: On connection and after point claims
+- **Purpose**: Send current leaderboard rankings
+- **Data**: Array of ranked user objects
 
-#### `users:updated`
-- **Triggered**: After user creation
-- **Purpose**: Notify clients of user list changes
-- **Usage**: Frontend refreshes user dropdown
+#### `claim:history`
+- **Triggered**: After successful point claims
+- **Purpose**: Notify all clients of new claim
+- **Data**: Claim history object with user, points, timestamp
+
+#### `claim:error`
+- **Triggered**: When claim processing fails
+- **Purpose**: Notify client of errors
+- **Data**: Error message
+
+### Socket.IO Configuration
+
+**CORS Settings**:
+```javascript
+const io = new Server(server, {
+    cors: {
+        origin: true,  // Allows all origins
+        methods: ['GET', 'POST']
+    }
+});
+```
+
+**Connection Handling**:
+```javascript
+io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id);
+    
+    // Send initial data
+    getLeaderboard().then((data) => 
+        socket.emit('leaderboard:data', data)
+    ).catch(() => {});
+    
+    // Handle disconnection
+    socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id);
+    });
+});
+```
+
+## 🌱 Database Seeding
+
+### seed.js - Database Seeder
+
+**Location**: `src/seed.js`
+
+**Purpose**: Populates database with sample users for development.
+
+**Features**:
+- Checks if users already exist (prevents duplicate seeding)
+- Creates 10 sample users with Indian names
+- Handles duplicate key errors gracefully
+- Logs seeding results
 
 **Event Emission**:
 ```javascript
@@ -298,6 +322,20 @@ io.emit('leaderboard:updated');
 
 ## 🔧 Configuration
 
+### Environment Variables
+
+**Required Variables**:
+```env
+MONGODB_URI=mongodb://localhost:27017/leaderboard
+PORT=5000
+CLIENT_ORIGIN=http://localhost:5173
+```
+
+**Optional Variables**:
+- `NODE_ENV` - Environment (development/production)
+- `MONGODB_URI` - MongoDB connection string
+- `PORT` - Server port (default: 5000)
+- `CLIENT_ORIGIN` - Allowed CORS origin (currently allows all)
 
 ### Package Scripts
 
@@ -325,7 +363,7 @@ io.emit('leaderboard:updated');
 ### CORS Configuration
 ```javascript
 app.use(cors({
-    origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173'
+    origin: true  // Allows all origins
 }));
 ```
 
@@ -339,8 +377,9 @@ app.use(cors({
 - Check network connectivity
 
 #### CORS Errors
-- Verify `CLIENT_ORIGIN` environment variable
-- Check frontend URL matches CORS configuration
+- Current configuration allows all origins
+- Check if frontend is making requests to correct backend URL
+- Verify Socket.IO connection URL
 
 #### Socket.IO Issues
 - Ensure Socket.IO server is properly initialized
@@ -349,8 +388,6 @@ app.use(cors({
 
 ### Postman Collection
 Create a Postman collection for API testing and documentation.
-
-
 
 ---
 

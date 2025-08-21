@@ -10,6 +10,7 @@ A real-time leaderboard application built with React (Frontend) and Node.js/Expr
 - **Claim History**: Track all point claims with timestamps
 - **Responsive Design**: Modern UI that works on all devices
 - **Live Rankings**: Automatic ranking updates based on total points
+- **Direct Socket.IO Claims**: Point claiming handled directly through WebSocket connections
 
 ## 📁 Project Structure
 
@@ -25,17 +26,17 @@ A real-time leaderboard application built with React (Frontend) and Node.js/Expr
 │   └── package.json
 ├── server/                 # Node.js Backend
 │   ├── src/
-│   │   ├── index.js       # Main server file
+│   │   ├── index.js       # Main server file with Socket.IO logic
 │   │   ├── db.js          # Database connection
 │   │   ├── models/        # MongoDB models
 │   │   │   ├── User.js
 │   │   │   └── ClaimHistory.js
 │   │   ├── routes/        # API routes
-│   │       ├── users.js
-│   │       ├── claims.js
-│   │       └── leaderboard.js
-│   │           
-│   └── package.json 
+│   │   │   └── users.js
+│   │   ├── services/      # Business logic services
+│   │       └── socketService.js
+│   │   
+│   └── package.json
 └── docker-compose.yml     # MongoDB container setup
 ```
 
@@ -44,7 +45,7 @@ A real-time leaderboard application built with React (Frontend) and Node.js/Expr
 ### Frontend
 - **React 19.1.1** - UI framework
 - **Vite** - Build tool and dev server
-- **Socket.IO Client** - For Real-time Leaderboard updation
+- **Socket.IO Client** - For Real-time Leaderboard updation and direct claims
 - **Axios** - HTTP client for API calls
 - **CSS3** - Styling with modern design
 
@@ -53,8 +54,8 @@ A real-time leaderboard application built with React (Frontend) and Node.js/Expr
 - **Express.js** - Web framework
 - **MongoDB** - NoSQL database
 - **Mongoose** - MongoDB ODM
-- **Socket.IO** - Real-time bidirectional communication
-- **CORS** - Cross-origin resource sharing
+- **Socket.IO** - Real-time bidirectional communication with integrated claim handling
+- **CORS** - Cross-origin resource sharing (allows all origins)
 
 ## 🚀 Quick Start
 
@@ -90,10 +91,7 @@ A real-time leaderboard application built with React (Frontend) and Node.js/Expr
 5. **Set up Environment Variables**
    Create a `.env` file in `server` (see examples in Environment Variables section).
 
-
-   ```
-
-7. **Start the Application**
+6. **Start the Application**
    ```bash
    # Terminal 1 - Start Backend
    cd server
@@ -104,7 +102,7 @@ A real-time leaderboard application built with React (Frontend) and Node.js/Expr
    npm run dev
    ```
 
-8. **Access the Application**
+7. **Access the Application**
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:5000
 
@@ -119,9 +117,9 @@ A real-time leaderboard application built with React (Frontend) and Node.js/Expr
    ```env
    MONGODB_URI=mongodb+srv://<USERNAME>:<PASSWORD>@<CLUSTER_HOST>/leaderboard?retryWrites=true&w=majority
    ```
-6. Run `npm run seed` (works with Atlas too) to create sample users
 
-### Option B: Docker (local)
+
+### Option B: Docker (local minimal)
 ```bash
 # From project root
 docker-compose up -d
@@ -145,20 +143,20 @@ http://localhost:5000/api
 - `POST /users` - Create a new user
 - `GET /users/:userId/history` - Get user's claim history
 
-#### Claims
-- `POST /claim` - Claim points for a user
-
-#### Leaderboard
-- `GET /leaderboard` - Get ranked leaderboard
-
 ### Socket.IO Events
-- `leaderboard:updated` - Emitted when leaderboard changes
-- `users:updated` - Emitted when users list changes
+
+#### Client to Server
+- `claim:submit` - Submit a point claim with `{ userId }`
+
+#### Server to Client
+- `leaderboard:data` - Emitted when leaderboard changes
+- `claim:history` - Emitted when a new claim is processed
+- `claim:error` - Emitted when claim processing fails
 
 ## 🎯 Usage
 
 1. **Adding Users**: Use the "Add new user name" form to create users
-2. **Claiming Points**: Select a user and click "Claim" to award random points (1-10)
+2. **Claiming Points**: Select a user and click "Claim" to award random points (1-10) via Socket.IO
 3. **Viewing Rankings**: The leaderboard automatically updates in real-time
 4. **History**: Click on a user to view their claim history
 
@@ -237,10 +235,11 @@ docker-compose down
 
 ## 🔒 Security Considerations
 
-- CORS is configured for development
+- CORS allows all origins (configured for development flexibility)
 - Input validation on all endpoints
 - MongoDB injection protection via Mongoose
 - Rate limiting can be added for production
+- Socket.IO claim validation with user existence checks
 
 
 ---

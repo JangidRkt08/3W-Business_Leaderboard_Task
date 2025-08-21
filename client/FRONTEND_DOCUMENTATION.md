@@ -2,14 +2,14 @@
 
 ## Overview
 
- frontend of a React application built with Vite that provides a real-time leaderboard interface. It communicates with the backend via REST API calls and Socket.IO for real-time updates.
+The frontend is a React application built with Vite that provides a real-time leaderboard interface. It communicates with the backend via REST API calls for user management and Socket.IO for real-time updates and point claiming.
 
 ## 🏗️ Architecture
 
 ### Technology Stack
 - **React 19.1.1** - Modern React with hooks
 - **Vite** - Fast build tool and dev server
-- **Socket.IO Client** - Real-time communication
+- **Socket.IO Client** - Real-time communication and direct point claiming
 - **Axios** - HTTP client for API requests
 - **CSS3** - Modern styling with responsive design
 
@@ -55,6 +55,11 @@ This starts the development server at `http://localhost:5173`
 npm run build
 ```
 
+### Linting
+```bash
+npm run lint
+```
+
 ## 📁 Component Documentation
 
 ### App.jsx - Main Application Component
@@ -65,7 +70,7 @@ npm run build
 
 **Key Features**:
 - User management (add, select users)
-- Point claiming functionality
+- Point claiming functionality via Socket.IO
 - Real-time leaderboard display
 - Claim history tracking
 - Socket.IO integration for live updates
@@ -87,35 +92,28 @@ const [message, setMessage] = useState('');       // Success/error messages
 - **API Call**: `GET /api/users`
 - **Updates**: `users` state and auto-selects first user if none selected
 
-#### `refreshLeaderboard()`
-- **Purpose**: Fetches current leaderboard rankings
-- **API Call**: `GET /api/leaderboard`
-- **Updates**: `leaderboard` state
-
-#### `handleAddUser(e)`
-- **Purpose**: Creates a new user
-- **API Call**: `POST /api/users`
-- **Validation**: Ensures name is not empty
-- **Updates**: Refreshes users and leaderboard
-
 #### `handleClaim()`
-- **Purpose**: Claims points for selected user
-- **API Call**: `POST /api/claim`
+- **Purpose**: Claims points for selected user via Socket.IO
+- **Socket Event**: Emits `claim:submit` with `{ userId }`
 - **Features**: Loading state, success message, history update
-- **Updates**: Leaderboard and user history
+- **Updates**: Leaderboard and user history via Socket.IO events
 
 **Socket.IO Integration**:
 ```javascript
 useEffect(() => {
     // Listen for real-time updates
-    socket.on('leaderboard:updated', () => refreshLeaderboard());
-    socket.on('users:updated', () => refreshUsers());
+    socket.on('leaderboard:data', (data) => setLeaderboard(data));
+    socket.on('claim:history', (item) => {
+        if (item && item.user === selectedUserId) {
+            setHistory((prev) => [item, ...prev]);
+        }
+    });
     
     return () => {
-        socket.off('leaderboard:updated');
-        socket.off('users:updated');
+        socket.off('leaderboard:data');
+        socket.off('claim:history');
     };
-}, []);
+}, [selectedUserId]);
 ```
 
 ## 🔌 API Integration
@@ -148,24 +146,13 @@ const api = axios.create({
 - **Returns**: Promise with created user
 - **Usage**: Adding new users
 
-#### `claimPoints(userId)`
-- **Method**: POST
-- **Endpoint**: `/claim`
-- **Body**: `{ userId: string }`
-- **Returns**: Promise with claim result
-- **Usage**: Claiming points for users
-
-#### `getLeaderboard()`
-- **Method**: GET
-- **Endpoint**: `/leaderboard`
-- **Returns**: Promise with ranked users
-- **Usage**: Displaying leaderboard
-
 #### `getUserHistory(userId)`
 - **Method**: GET
 - **Endpoint**: `/users/${userId}/history`
 - **Returns**: Promise with claim history
 - **Usage**: Showing user's claim history
+
+**Note**: Point claiming is now handled directly through Socket.IO, not via REST API.
 
 ## 🔌 Socket.IO Integration
 
@@ -173,7 +160,7 @@ const api = axios.create({
 
 **Location**: `src/lib/socket.js`
 
-**Purpose**: Configures Socket.IO client for real-time updates.
+**Purpose**: Configures Socket.IO client for real-time updates and point claiming.
 
 **Configuration**:
 ```javascript
@@ -186,6 +173,14 @@ const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
 - `leaderboard:updated` - Triggers leaderboard refresh
 - `users:updated` - Triggers users list refresh
 
+**Responsive Design**:
+```css
+@media (min-width: 800px) {
+    .grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+```
 
 ## 🔧 Configuration
 
