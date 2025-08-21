@@ -2,6 +2,10 @@
 
 A real-time leaderboard application built with React (Frontend) and Node.js/Express (Backend) with MongoDB database and Socket.IO for real-time updates.
 
+
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/2e686d82-eb4d-4e4f-97a2-194f225e4eb9" />
+
+
 ## 🚀 Features
 
 - **Real-time Updates**: Live leaderboard updates using Socket.IO
