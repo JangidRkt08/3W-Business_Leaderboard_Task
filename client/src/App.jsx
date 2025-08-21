@@ -14,7 +14,7 @@ export default function App() {
   useEffect(() => {
     refreshUsers();
     socket.on("leaderboard:data", (rows) => setLeaderboard(rows));
-    socket.on("users:updated", () => refreshUsers());
+    socket.on("users:updated", refreshUsers);
     return () => {
       socket.off("leaderboard:data");
       socket.off("users:updated");
@@ -55,7 +55,6 @@ export default function App() {
     if (!name) return;
     await createUser(name);
     form.reset();
-    await refreshUsers();
   }
 
   async function handleClaim() {

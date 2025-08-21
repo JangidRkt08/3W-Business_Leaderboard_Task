@@ -1,7 +1,7 @@
 const express = require('express');
 const User = require('../models/User');
 const ClaimHistory = require('../models/ClaimHistory');
-
+const { getLeaderboard } = require('../services/socketService');
 const router = express.Router();
 
 // GET all users
@@ -23,9 +23,10 @@ router.post('/', async (req, res) => {
 		}
 		const user = await User.create({ name: name.trim() });
 		res.status(201).json(user);
-		// broadcast updated leaderboard trigger
 		const io = req.app.get('io');
 		io.emit('users:updated');
+		const data = await getLeaderboard();
+		io.emit('leaderboard:data', data);
 	} catch (err) {
 		if (err.code === 11000) {
 			return res.status(409).json({ error: 'User with this name already exists' });
