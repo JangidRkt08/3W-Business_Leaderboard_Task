@@ -3,7 +3,21 @@
 A real-time leaderboard application built with React (Frontend) and Node.js/Express (Backend) with MongoDB database and Socket.IO for real-time updates.
 
 
+### Deashboard
+
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/2e686d82-eb4d-4e4f-97a2-194f225e4eb9" />
+
+### Create New User (Postman)
+
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/f6542be9-fa6d-4b57-a043-987d50a5fa17" />
+
+### Socket.io (Postman)
+
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/ba021132-011e-4f54-a219-ea726ecd9134" />
+
+
+
+
 
 
 ## 🚀 Features
