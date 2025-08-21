@@ -14,19 +14,19 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
+// Allow every origin for Socket.IO
 const io = new Server(server, {
-	cors: {
-		origin: process.env.CLIENT_ORIGIN || '*',
-		methods: ['GET', 'POST']
-	}
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
 });
 
 // Expose io to routes via request
 app.set('io', io);
 
-app.use(cors({
-	origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173'
-}));
+// Allow every origin for Express routes
+app.use(cors());
 app.use(express.json());
 
 app.get('/', (req, res) => {
@@ -36,6 +36,11 @@ app.get('/', (req, res) => {
 app.use('/api/users', usersRouter);
 app.use('/api/claim', claimsRouter);
 app.use('/api/leaderboard', leaderboardRouter);
+
+// Helpful 404 for wrong base URL
+app.use('/api', (req, res) => {
+	res.status(404).json({ error: 'Not Found', path: req.path });
+});
 
 const PORT = process.env.PORT || 5000;
 
