@@ -14,13 +14,10 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
-// Support multiple allowed origins via comma-separated env
-const rawOrigins = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
-const allowedOrigins = rawOrigins.split(',').map(o => o.trim());
-
+// Allow every origin for Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: "*",
     methods: ["GET", "POST"],
   },
 });
@@ -28,11 +25,8 @@ const io = new Server(server, {
 // Expose io to routes via request
 app.set('io', io);
 
-app.use(
-  cors({
-    origin: allowedOrigins,
-  })
-);
+// Allow every origin for Express routes
+app.use(cors());
 app.use(express.json());
 
 app.get('/', (req, res) => {
