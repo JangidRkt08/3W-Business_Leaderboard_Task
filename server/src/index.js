@@ -17,7 +17,7 @@ const server = http.createServer(app);
 // Allow every origin for Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: true,
     methods: ["GET", "POST"],
   },
 });
@@ -26,7 +26,9 @@ const io = new Server(server, {
 app.set('io', io);
 
 // Allow every origin for Express routes
-app.use(cors());
+app.use(cors({
+	origin: true,
+}));
 app.use(express.json());
 
 app.get('/', (req, res) => {
