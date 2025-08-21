@@ -4,10 +4,10 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const { Server } = require('socket.io');
 const connectDb = require('./db');
-
+const ClaimHistory = require('./models/ClaimHistory');
+const { getLeaderboard } = require('./services/socketService');
 const usersRouter = require('./routes/users');
-const claimsRouter = require('./routes/claims');
-const leaderboardRouter = require('./routes/leaderboard');
+const User = require('./models/User');
 
 dotenv.config();
 
@@ -31,17 +31,46 @@ app.use(cors({
 }));
 app.use(express.json());
 
-app.get('/', (req, res) => {
-	res.json({ status: 'ok', message: 'Leaderboard API running' });
+app.get("/", (req, res) => {
+  res.json({ status: "ok", message: "Leaderboard API running" });
 });
 
-app.use('/api/users', usersRouter);
-app.use('/api/claim', claimsRouter);
-app.use('/api/leaderboard', leaderboardRouter);
+app.use("/api/users", usersRouter);
 
-// Helpful 404 for wrong base URL
-app.use('/api', (req, res) => {
-	res.status(404).json({ error: 'Not Found', path: req.path });
+io.on('connection', (socket) => {
+	getLeaderboard().then((data) => socket.emit('leaderboard:data', data)).catch(() => {});
+
+	socket.on('claim:submit', async (payload, ack) => {
+		try {
+			const { userId } = payload || {};
+			if (!userId) {
+				const error = 'userId is required';
+				return typeof ack === 'function'
+					? ack({ ok: false, error })
+					: socket.emit('claim:error', { message: error });
+			}
+
+			const user = await User.findById(userId);
+			if (!user) {
+				const error = 'User not found';
+				return typeof ack === 'function'
+					? ack({ ok: false, error })
+					: socket.emit('claim:error', { message: error });
+			}
+
+			const points = Math.floor(Math.random() * 10) + 1; // 1..10
+			user.totalPoints += points;
+			await user.save();
+			const history = await ClaimHistory.create({ user: user._id, points });
+			io.emit('claim:history', history);
+
+			const data = await getLeaderboard();
+			io.emit('leaderboard:data', data);
+		} catch (err) {
+			if (typeof ack === 'function') return ack({ ok: false, error: 'Failed to process claim' });
+			socket.emit('claim:error', { message: 'Failed to process claim' });
+		}
+	});
 });
 
 const PORT = process.env.PORT || 5000;
